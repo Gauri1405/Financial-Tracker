@@ -1,5 +1,6 @@
 import { useUser } from "@clerk/clerk-react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
 export interface FinancialRecord {
   _id?: string;
@@ -13,9 +14,9 @@ export interface FinancialRecord {
 
 interface FinancialRecordsContextType {
   records: FinancialRecord[];
-  addRecord: (record: FinancialRecord) => void;
-  updateRecord: (id: string, newRecord: FinancialRecord) => void;
-  deleteRecord: (id: string) => void;
+  addRecord: (record: FinancialRecord) => Promise<void>;
+  updateRecord: (id: string, newRecord: FinancialRecord) => Promise<void>;
+  deleteRecord: (id: string) => Promise<void>;
 }
 
 export const FinancialRecordsContext = createContext<
@@ -30,16 +31,23 @@ export const FinancialRecordsProvider = ({
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const { user } = useUser();
 
+  // 🔹 Fetch all records of logged-in user
   const fetchRecords = async () => {
     if (!user) return;
-    const response = await fetch(
-      `http://localhost:3001/financial-records/getAllByUserID/${user.id}`
-    );
 
-    if (response.ok) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/financial-records/getAllByUserID/${user.id}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch records");
+      }
+
       const records = await response.json();
-      console.log(records);
       setRecords(records);
+    } catch (error) {
+      console.error("Error fetching records:", error);
     }
   };
 
@@ -47,67 +55,78 @@ export const FinancialRecordsProvider = ({
     fetchRecords();
   }, [user]);
 
+  // 🔹 Add record
   const addRecord = async (record: FinancialRecord) => {
-    const response = await fetch("http://localhost:3001/financial-records", {
-      method: "POST",
-      body: JSON.stringify(record),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
     try {
-      if (response.ok) {
-        const newRecord = await response.json();
-        setRecords((prev) => [...prev, newRecord]);
-      }
-    } catch (err) {}
-  };
-
-  const updateRecord = async (id: string, newRecord: FinancialRecord) => {
-    const response = await fetch(
-      `http://localhost:3001/financial-records/${id}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(newRecord),
+      const response = await fetch(`${API_BASE_URL}/financial-records`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-      }
-    );
+        body: JSON.stringify(record),
+      });
 
-    try {
-      if (response.ok) {
-        const newRecord = await response.json();
-        setRecords((prev) =>
-          prev.map((record) => {
-            if (record._id === id) {
-              return newRecord;
-            } else {
-              return record;
-            }
-          })
-        );
+      if (!response.ok) {
+        throw new Error("Failed to add record");
       }
-    } catch (err) {}
+
+      const newRecord = await response.json();
+      setRecords((prev) => [...prev, newRecord]);
+    } catch (error) {
+      console.error("Error adding record:", error);
+    }
   };
 
-  const deleteRecord = async (id: string) => {
-    const response = await fetch(
-      `http://localhost:3001/financial-records/${id}`,
-      {
-        method: "DELETE",
-      }
-    );
-
+  // 🔹 Update record
+  const updateRecord = async (id: string, newRecord: FinancialRecord) => {
     try {
-      if (response.ok) {
-        const deletedRecord = await response.json();
-        setRecords((prev) =>
-          prev.filter((record) => record._id !== deletedRecord._id)
-        );
+      const response = await fetch(
+        `${API_BASE_URL}/financial-records/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newRecord),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update record");
       }
-    } catch (err) {}
+
+      const updatedRecord = await response.json();
+      setRecords((prev) =>
+        prev.map((record) =>
+          record._id === id ? updatedRecord : record
+        )
+      );
+    } catch (error) {
+      console.error("Error updating record:", error);
+    }
+  };
+
+  // 🔹 Delete record
+  const deleteRecord = async (id: string) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/financial-records/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete record");
+      }
+
+      const deletedRecord = await response.json();
+      setRecords((prev) =>
+        prev.filter((record) => record._id !== deletedRecord._id)
+      );
+    } catch (error) {
+      console.error("Error deleting record:", error);
+    }
   };
 
   return (
@@ -120,9 +139,7 @@ export const FinancialRecordsProvider = ({
 };
 
 export const useFinancialRecords = () => {
-  const context = useContext<FinancialRecordsContextType | undefined>(
-    FinancialRecordsContext
-  );
+  const context = useContext(FinancialRecordsContext);
 
   if (!context) {
     throw new Error(
