@@ -5,7 +5,6 @@ import {
   Column,
   CellProps,
   Row,
-  TableInstance,
   HeaderGroup,
 } from "react-table";
 
