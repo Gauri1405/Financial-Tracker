@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
+import { FinancialRecord, useFinancialRecords } from "../../contexts/financial-record-context";
 import {
-  FinancialRecord,
-  useFinancialRecords,
-} from "../../contexts/financial-record-context";
-import { useTable, Column, CellProps, Row } from "react-table";
+  useTable,
+  Column,
+  CellProps,
+  Row,
+  TableInstance,
+  HeaderGroup,
+} from "react-table";
 
 interface EditableCellProps extends CellProps<FinancialRecord> {
   updateRecord: (rowIndex: number, columnId: string, value: any) => void;
@@ -18,7 +22,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   editable,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(initialValue);
+  const [value, setValue] = useState<any>(initialValue);
 
   const onBlur = () => {
     setIsEditing(false);
@@ -38,79 +42,50 @@ const EditableCell: React.FC<EditableCellProps> = ({
           onBlur={onBlur}
           style={{ width: "100%" }}
         />
-      ) : typeof value === "string" ? (
-        value
-      ) : (
+      ) : value != null ? (
         value.toString()
+      ) : (
+        ""
       )}
     </div>
   );
 };
 
-export const FinancialRecordList = () => {
+export const FinancialRecordList: React.FC = () => {
   const { records, updateRecord, deleteRecord } = useFinancialRecords();
 
   const updateCellRecord = (rowIndex: number, columnId: string, value: any) => {
     const id = records[rowIndex]?._id;
-    updateRecord(id ?? "", { ...records[rowIndex], [columnId]: value });
+    if (!id) return;
+    updateRecord(id, { ...records[rowIndex], [columnId]: value });
   };
 
-  const columns: Array<Column<FinancialRecord>> = useMemo(
+  const columns: Column<FinancialRecord>[] = useMemo(
     () => [
       {
         Header: "Description",
         accessor: "description",
-        Cell: (props) => (
-          <EditableCell
-            {...props}
-            updateRecord={updateCellRecord}
-            editable={true}
-          />
-        ),
+        Cell: (props) => <EditableCell {...props} updateRecord={updateCellRecord} editable={true} />,
       },
       {
         Header: "Amount",
         accessor: "amount",
-        Cell: (props) => (
-          <EditableCell
-            {...props}
-            updateRecord={updateCellRecord}
-            editable={true}
-          />
-        ),
+        Cell: (props) => <EditableCell {...props} updateRecord={updateCellRecord} editable={true} />,
       },
       {
         Header: "Category",
         accessor: "category",
-        Cell: (props) => (
-          <EditableCell
-            {...props}
-            updateRecord={updateCellRecord}
-            editable={true}
-          />
-        ),
+        Cell: (props) => <EditableCell {...props} updateRecord={updateCellRecord} editable={true} />,
       },
       {
         Header: "Payment Method",
         accessor: "paymentMethod",
-        Cell: (props) => (
-          <EditableCell
-            {...props}
-            updateRecord={updateCellRecord}
-            editable={true}
-          />
-        ),
+        Cell: (props) => <EditableCell {...props} updateRecord={updateCellRecord} editable={true} />,
       },
       {
         Header: "Date",
         accessor: "date",
-        Cell: (props) => (
-          <EditableCell
-            {...props}
-            updateRecord={updateCellRecord}
-            editable={false}
-          />
-        ),
+        Cell: (props) => <EditableCell {...props} updateRecord={updateCellRecord} editable={false} />,
       },
       {
         Header: "Delete",
@@ -128,25 +103,25 @@ export const FinancialRecordList = () => {
     [records]
   );
 
-  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
-    useTable({
-      columns,
-      data: records,
-    });
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } = useTable({
+    columns,
+    data: records,
+  });
+
   return (
     <div className="table-container">
       <table {...getTableProps()} className="table">
         <thead>
-          {headerGroups.map((hg) => (
+          {headerGroups.map((hg: HeaderGroup<FinancialRecord>) => (
             <tr {...hg.getHeaderGroupProps()}>
               {hg.headers.map((column) => (
-                <th {...column.getHeaderProps()}> {column.render("Header")}</th>
+                <th {...column.getHeaderProps()}> {column.render("Header")} </th>
               ))}
             </tr>
           ))}
         </thead>
         <tbody {...getTableBodyProps()}>
-          {rows.map((row, idx) => {
+          {rows.map((row: Row<FinancialRecord>) => {
             prepareRow(row);
             return (
               <tr {...row.getRowProps()}>

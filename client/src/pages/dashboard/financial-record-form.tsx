@@ -9,13 +9,18 @@ export const FinancialRecordForm = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const { addRecord } = useFinancialRecords();
 
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!user) {
+      alert("User not loaded yet!");
+      return;
+    }
+
     const newRecord = {
-      userId: user?.id ?? "",
+      userId: user.id,
       date: new Date(),
       description: description,
       amount: parseFloat(amount),
@@ -24,11 +29,14 @@ export const FinancialRecordForm = () => {
     };
 
     addRecord(newRecord);
+
     setDescription("");
     setAmount("");
     setCategory("");
     setPaymentMethod("");
   };
+
+  if (!isLoaded) return <div>Loading...</div>;
 
   return (
     <div className="form-container">
